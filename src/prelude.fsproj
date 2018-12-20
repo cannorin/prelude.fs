@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ToplevelOperators.fs" />
+    <Compile Include="Interop.fs" />
+    <Compile Include="Patterns.fs" />
+    <Compile Include="String.fs" />
+    <Compile Include="Collections.fs" />
+    <Compile Include="DataTypes.fs" />
+    <Compile Include="ComputationExpressions.fs" />
+    <Compile Include="Path.fs" />
+    <Compile Include="Utilities.fs" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+// [ FAKE GROUP ]
+group Build
+    storage none
+    source https://api.nuget.org/v3/index.json
+    nuget Fake.DotNet.Cli
+    nuget Fake.DotNet.MSBuild
+    nuget Fake.IO.FileSystem
+    nuget Fake.Core.Target
+    nuget System.Xml.XDocument
+    nuget System.Xml.Linq
