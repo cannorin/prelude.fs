@@ -572,10 +572,11 @@ module ComputationExpressions =
     let result = ResultBuilder()
     let lazy'  = LazyBuilder()
 
-// from: Path.fs
+// from: IO.fs
+open System
+open System.IO
+
 module Path =
-  open System
-  open System.IO
 
   let combine x y = Path.Combine(x, y)
 
@@ -594,6 +595,24 @@ module Path =
       path.MakeRelativeUri(filePath)
       |> to_s
       |> String.replace '/' Path.DirectorySeparatorChar)
+
+module File =
+  let inline isHidden path =
+    File.GetAttributes(path).HasFlag(FileAttributes.Hidden)
+
+module Directory =
+  let inline isHidden dir =
+    DirectoryInfo(dir).Attributes.HasFlag(FileAttributes.Hidden)
+  
+  let rec enumerateFilesRecursively includeHidden dir =
+    seq {
+      for x in Directory.EnumerateFiles dir do
+        if includeHidden || not (File.isHidden x) then
+          yield x
+      for subdir in Directory.EnumerateDirectories dir do
+        if includeHidden || not (isHidden subdir) then
+          yield! enumerateFilesRecursively includeHidden subdir
+    }
 
 // from: Utilities.fs
 module Convert =

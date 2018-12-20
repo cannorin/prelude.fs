@@ -10,7 +10,7 @@
     <Compile Include="Collections.fs" />
     <Compile Include="DataTypes.fs" />
     <Compile Include="ComputationExpressions.fs" />
-    <Compile Include="Path.fs" />
+    <Compile Include="IO.fs" />
     <Compile Include="Utilities.fs" />
   </ItemGroup>
 </Project>
