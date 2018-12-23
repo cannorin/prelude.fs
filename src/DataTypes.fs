@@ -6,10 +6,10 @@ module Lazy =
   let inline force (x: Lazy<_>) = x.Force()
   
   let inline bind (f: 'a -> Lazy<'b>) (x: Lazy<'a>) : Lazy<'b> =
-    Lazy.Create (fun () -> x |> force |> f |> force)
+    Lazy<_>.Create (fun () -> x |> force |> f |> force)
 
   let inline returnValue x =
-    Lazy.CreateFromValue x
+    Lazy<_>.CreateFromValue x
 
   let inline map (f: 'a -> 'b) (x: Lazy<'a>) =
     lazy (f x.Value)
