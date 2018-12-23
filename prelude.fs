@@ -319,7 +319,7 @@ module Seq =
 
   let inline tryTake length xs =
     let xs' = xs |> Seq.indexed |> Seq.cache
-    if xs' |> Seq.exists (snd >> ((=) (length - 1))) then
+    if xs' |> Seq.exists (fst >> ((=) (length - 1))) then
       xs' |> Seq.take length |> Seq.map snd |> Some
     else None
   
