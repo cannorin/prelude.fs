@@ -334,6 +334,12 @@ module Map =
           | None   -> newMap
     ) Map.empty
 
+  let inline append m1 m2 =
+    Map.fold (fun m k v -> Map.add k v m) m1 m2
+
+  let inline concat ms =
+    ms |> Seq.fold (fun state m -> append state m) Map.empty
+
 type dict<'a, 'b> = IDictionary<'a, 'b>
 
 module Dict =
