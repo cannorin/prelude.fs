@@ -290,6 +290,11 @@ module List =
 
   let inline split separator xs = splitWith ((=) separator) xs
 
+  let inline tryTake length xs =
+    if List.length xs >= length then
+      List.take length xs |> Some
+    else None
+
   let inline skipSafe length xs =
     if List.length xs > length then
       List.skip length xs
@@ -311,6 +316,12 @@ module Seq =
     xs |> Seq.indexed
        |> Seq.skipWhile (fst >> ((>) length))
        |> Seq.map snd
+
+  let inline tryTake length xs =
+    let xs' = xs |> Seq.indexed |> Seq.cache
+    if xs' |> Seq.exists (snd >> ((=) (length - 1))) then
+      xs' |> Seq.take length |> Seq.map snd |> Some
+    else None
   
   let inline foldi folder state xs =
     Seq.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
@@ -320,6 +331,12 @@ module Array =
     if Array.length xs > length then
       Array.skip length xs
     else Array.empty
+
+  let inline tryTake length xs =
+    if Array.length xs > length then
+      Array.take length xs |> Some
+    else if Array.length xs = length then Some xs
+    else None
 
   let inline foldi folder state xs =
     Array.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
