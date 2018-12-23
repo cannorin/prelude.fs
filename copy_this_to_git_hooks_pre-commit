@@ -1,3 +1,4 @@
 #!/bin/sh
 
 ./fake.sh build
+git add prelude.fs

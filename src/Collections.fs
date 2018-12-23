@@ -17,6 +17,11 @@ module List =
 
   let inline split separator xs = splitWith ((=) separator) xs
 
+  let inline skipSafe length xs =
+    if List.length xs > length then
+      List.skip length xs
+    else List.empty
+
   let inline foldi folder state xs =
     List.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 
@@ -28,11 +33,21 @@ module Seq =
        |> Seq.map snd
   
   let inline split separator xs = splitWith ((=) separator) xs
+
+  let inline skipSafe length xs = 
+    xs |> Seq.indexed
+       |> Seq.skipWhile (fst >> ((>) length))
+       |> Seq.map snd
   
   let inline foldi folder state xs =
     Seq.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 
 module Array =
+  let inline skipSafe length xs =
+    if Array.length xs > length then
+      Array.skip length xs
+    else Array.empty
+
   let inline foldi folder state xs =
     Array.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 

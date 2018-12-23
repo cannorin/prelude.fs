@@ -114,3 +114,19 @@ module String =
 
   let inline skipWhile predicate (str: string) =
     whileBase predicate skip str
+
+  let inline build (builder: StringBuilder -> unit) =
+    let sb = new StringBuilder()
+    builder sb
+    sb.ToString()
+
+[<AutoOpen>]
+module StringExtensions =
+  open System.Text
+
+  type StringBuilder with
+    member inline this.printf format =
+      Printf.kprintf (fun s -> this.Append s |> ignore) format
+
+    member inline this.printfn format =
+      Printf.kprintf (fun s -> this.AppendLine s |> ignore) format

@@ -255,6 +255,22 @@ module String =
   let inline skipWhile predicate (str: string) =
     whileBase predicate skip str
 
+  let inline build (builder: StringBuilder -> unit) =
+    let sb = new StringBuilder()
+    builder sb
+    sb.ToString()
+
+[<AutoOpen>]
+module StringExtensions =
+  open System.Text
+
+  type StringBuilder with
+    member inline this.printf format =
+      Printf.kprintf (fun s -> this.Append s |> ignore) format
+
+    member inline this.printfn format =
+      Printf.kprintf (fun s -> this.AppendLine s |> ignore) format
+
 // from: Collections.fs
 open System.Collections.Generic
 
@@ -274,6 +290,11 @@ module List =
 
   let inline split separator xs = splitWith ((=) separator) xs
 
+  let inline skipSafe length xs =
+    if List.length xs > length then
+      List.skip length xs
+    else List.empty
+
   let inline foldi folder state xs =
     List.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 
@@ -285,11 +306,21 @@ module Seq =
        |> Seq.map snd
   
   let inline split separator xs = splitWith ((=) separator) xs
+
+  let inline skipSafe length xs = 
+    xs |> Seq.indexed
+       |> Seq.skipWhile (fst >> ((>) length))
+       |> Seq.map snd
   
   let inline foldi folder state xs =
     Seq.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 
 module Array =
+  let inline skipSafe length xs =
+    if Array.length xs > length then
+      Array.skip length xs
+    else Array.empty
+
   let inline foldi folder state xs =
     Array.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
 
@@ -495,8 +526,6 @@ module ComputationExpressions =
   type ResultBuilder() =
     member inline this.Bind(m, f) = Result.bind f m
     member inline this.Return x = Ok x
-    [<CustomOperation("error")>]
-    member inline this.ReturnError x = Error x
     member inline this.ReturnFrom x = x
     
     member inline this.Delay f = f
@@ -559,7 +588,6 @@ module ComputationExpressions =
             this.Delay(fun () -> exec en.Current))
       )
 
-  
   open System.Threading.Tasks
   type AsyncBuilder with
     member inline this.Bind(t:Task<'T>, f:'T -> Async<'R>) : Async<'R> = 
@@ -567,10 +595,12 @@ module ComputationExpressions =
     member inline this.Bind(t:Task, f:unit -> Async<'R>) : Async<'R> = 
       async.Bind(Async.AwaitTask t, f)
 
+  [<RequireQualifiedAccess>]
   module Do =
     let option = OptionBuilder()
     let result = ResultBuilder()
     let lazy'  = LazyBuilder()
+
 
 // from: IO.fs
 open System

@@ -71,8 +71,6 @@ module ComputationExpressions =
   type ResultBuilder() =
     member inline this.Bind(m, f) = Result.bind f m
     member inline this.Return x = Ok x
-    [<CustomOperation("error")>]
-    member inline this.ReturnError x = Error x
     member inline this.ReturnFrom x = x
     
     member inline this.Delay f = f
@@ -135,7 +133,6 @@ module ComputationExpressions =
             this.Delay(fun () -> exec en.Current))
       )
 
-  
   open System.Threading.Tasks
   type AsyncBuilder with
     member inline this.Bind(t:Task<'T>, f:'T -> Async<'R>) : Async<'R> = 
@@ -143,7 +140,9 @@ module ComputationExpressions =
     member inline this.Bind(t:Task, f:unit -> Async<'R>) : Async<'R> = 
       async.Bind(Async.AwaitTask t, f)
 
+  [<RequireQualifiedAccess>]
   module Do =
     let option = OptionBuilder()
     let result = ResultBuilder()
     let lazy'  = LazyBuilder()
+
