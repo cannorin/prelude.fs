@@ -334,11 +334,31 @@ module Map =
           | None   -> newMap
     ) Map.empty
 
+  /// Appends two maps. If there is a duplicate key,
+  /// the value in the latter map (`m2`) will be used.
   let inline append m1 m2 =
     Map.fold (fun m k v -> Map.add k v m) m1 m2
 
+  /// Concats multiple maps. If there is a duplicate key,
+  /// the value in the last map containing that key will be used.
   let inline concat ms =
     ms |> Seq.fold (fun state m -> append state m) Map.empty
+
+  /// Merges two maps. If there is a duplicate key, the `merger` function
+  /// will be called: the first parameter is the key, the second is the value
+  /// found in the formar map `m1`, and the third is the one found in `m2`.
+  let inline merge merger m1 m2 =
+    Map.fold (fun m k v1 -> 
+      match m |> Map.tryFind k with
+        | Some v2 -> Map.add k (merger k v1 v2) m
+        | None -> Map.add k v1 m
+      ) m1 m2
+  
+  /// Merges multiple maps. If there is a duplicate key, the `merger` function
+  /// will be called: the first parameter is the key, the second is the value
+  /// already found in the earlier maps, and the third is the value newly found.
+  let inline mergeMany merger ms =
+    ms |> Seq.fold (fun state m -> merge merger state m) Map.empty
 
 type dict<'a, 'b> = IDictionary<'a, 'b>
 
