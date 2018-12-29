@@ -8,6 +8,8 @@ module ValueOption =
 
   let inline isNone option = match option with ValueNone -> true  | ValueSome _ -> false
 
+  let inline defaultValue value option = match option with ValueNone -> value | ValueSome v -> v
+
   let inline defaultWith defThunk option = match option with ValueNone -> defThunk () | ValueSome v -> v
 
   let inline orElse ifNone option = match option with ValueNone -> ifNone | ValueSome _ -> option
@@ -57,6 +59,10 @@ module ValueOption =
   let inline ofObj value = match value with null -> ValueNone | _ -> ValueSome value
 
   let inline toObj value = match value with ValueNone -> null | ValueSome x -> x
+
+  let inline ofOption option = match option with Some x -> ValueSome x | None -> ValueNone
+
+  let inline toOption option = match option with ValueSome x -> Some x | ValueNone -> None
 
 [<AutoOpen>]
 module ValueOptionExtension =
