@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net472; netstandard2.0; netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netcoreapp2.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ToplevelOperators.fs" />
@@ -9,6 +9,7 @@
     <Compile Include="String.fs" />
     <Compile Include="Collections.fs" />
     <Compile Include="DataTypes.fs" />
+    <Compile Include="ValueOption.fs" />
     <Compile Include="ComputationExpressions.fs" />
     <Compile Include="IO.fs" />
     <Compile Include="Utilities.fs" />
