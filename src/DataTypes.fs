@@ -53,7 +53,7 @@ module Result =
       | Ok x -> x
       | Error e -> reraise' e
 
-  let inline defaultWith f res =
+  let inline catch f res =
     match res with
       | Ok x -> x
       | Error e -> f e
