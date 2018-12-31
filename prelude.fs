@@ -609,7 +609,6 @@ module ValueOptionExtension =
       let rec go n = if n >= len then None elif predicate array.[n] then Some n else go (n+1)
       go 0
 
-
   module IEnumerator =
     let inline tryItem' index (e : IEnumerator<'T>) =
       let rec loop index =
@@ -662,6 +661,14 @@ module ValueOptionExtension =
         else
           None
       loop 0
+
+    let inline choose' chooser (source: seq<_>) =
+      seq {
+        for item in source do
+          match chooser item with
+            | ValueSome x -> yield x
+            | ValueNone -> ()
+      }
   
   module List =
     let inline tryLast' (list: 'T list) =
@@ -697,6 +704,13 @@ module ValueOptionExtension =
     let inline tryFindIndex' predicate list = 
       let rec loop n = function[] -> None | h::t -> if predicate h then Some n else loop (n+1) t
       loop 0 list
+
+    let inline choose' chooser list =
+      List.foldBack (fun x state ->
+        match chooser x with
+          | ValueSome x -> x :: state
+          | ValueNone -> state
+      ) [] list
 
   module Map =
     let inline tryFind' key (table: Map<_, _>) =
