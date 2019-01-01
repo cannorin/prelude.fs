@@ -11,6 +11,9 @@ module Lazy =
   let inline returnValue x =
     Lazy<_>.CreateFromValue x
 
+  let inline returnThunk thunk =
+    Lazy<_>.Create thunk
+
   let inline map (f: 'a -> 'b) (x: Lazy<'a>) =
     lazy (f x.Value)
 
