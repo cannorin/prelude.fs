@@ -79,6 +79,12 @@ module String =
   let inline splitSeq (sp: ^T seq) (s: ^String) =
     (^String: (member Split: ^T array -> StringSplitOptions -> ^String array) (s, Seq.toArray sp, StringSplitOptions.None))
 
+  let inline splitSkipEmpty (sp: ^T) (s: ^String) =
+    (^String: (member Split: ^T array -> StringSplitOptions -> ^String array) (s, [|sp|], StringSplitOptions.RemoveEmptyEntries))
+
+  let inline splitSeqSkipEmpty (sp: ^T seq) (s: ^String) =
+    (^String: (member Split: ^T array -> StringSplitOptions -> ^String array) (s, Seq.toArray sp, StringSplitOptions.RemoveEmptyEntries))
+
   let inline removeEmptyEntries (sp: string array) = sp |> Array.filter (String.IsNullOrEmpty >> not)
 
   let inline toChars (s: string) = s.ToCharArray()

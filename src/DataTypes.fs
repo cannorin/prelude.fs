@@ -74,7 +74,7 @@ module Async =
   let inline returnValue x = async { return x }
   let inline bind f m = async { let! x = m in return! f x }
 
-  let timeout (timeout : TimeSpan) a =
+  let inline timeout (timeout : TimeSpan) a =
     async {
       try
         let! child = Async.StartChild(a, int timeout.TotalMilliseconds) in

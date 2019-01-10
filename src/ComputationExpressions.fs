@@ -9,6 +9,7 @@ module ComputationExpressions =
 
     member inline this.Delay f = f
     member inline this.Undelay f = f()
+    member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
     
@@ -44,6 +45,7 @@ module ComputationExpressions =
     
     member inline this.Delay f = f
     member inline this.Undelay f = f()
+    member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
 
@@ -75,6 +77,7 @@ module ComputationExpressions =
     
     member inline this.Delay f = f
     member inline this.Undelay f = f()
+    member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
     

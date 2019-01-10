@@ -7,8 +7,8 @@
     <Compile Include="Interop.fs" />
     <Compile Include="Patterns.fs" />
     <Compile Include="String.fs" />
-    <Compile Include="Collections.fs" />
     <Compile Include="DataTypes.fs" />
+    <Compile Include="Collections.fs" />
     <Compile Include="ValueOption.fs" />
     <Compile Include="ComputationExpressions.fs" />
     <Compile Include="IO.fs" />

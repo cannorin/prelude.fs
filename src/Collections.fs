@@ -17,6 +17,10 @@ module List =
 
   let inline split separator xs = splitWith ((=) separator) xs
 
+  let inline splitWhile condition xs =
+    let mutable b = true
+    List.partition (fun x -> if b && condition x then true else b <- false; false) xs
+
   let inline tryTake length xs =
     if List.length xs >= length then
       List.take length xs |> Some
@@ -27,8 +31,25 @@ module List =
       List.skip length xs
     else List.empty
 
+  let inline tryFold folder state xs =
+    List.fold (fun state x -> match state with Some s -> folder s x | None -> None) (Some state) xs
+
+  let inline foldWhile condition folder state xs =
+    List.fold
+      (fun (cond, state) x -> if cond && condition x then true, folder state x else false, state)
+      (true, state)
+      xs
+    |> snd
+
   let inline foldi folder state xs =
     List.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
+
+  let inline mapFoldi folder state xs =
+    List.mapFold
+      (fun (i, state) x -> let result, state = folder i state x in result, (i+1, state))
+      (0, state)
+      xs
+    |> Tuple.map2 id snd
 
 module Seq =
   let inline splitWith predicate xs =
@@ -38,6 +59,10 @@ module Seq =
        |> Seq.map snd
   
   let inline split separator xs = splitWith ((=) separator) xs
+
+  let inline splitWhile condition xs =
+    let xs = Seq.cache xs
+    Seq.takeWhile condition xs, Seq.skipWhile condition xs
 
   let inline skipSafe length xs = 
     xs |> Seq.indexed
@@ -49,9 +74,26 @@ module Seq =
     if xs' |> Seq.exists (fst >> ((=) (length - 1))) then
       xs' |> Seq.take length |> Seq.map snd |> Some
     else None
-  
+ 
+  let inline tryFold folder state xs =
+    Seq.fold (fun state x -> match state with Some s -> folder s x | None -> None) (Some state) xs
+
+  let inline foldWhile condition folder state xs =
+    Seq.fold
+      (fun (cond, state) x -> if cond && condition x then true, folder state x else false, state)
+      (true, state)
+      xs
+    |> snd
+ 
   let inline foldi folder state xs =
     Seq.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
+
+  let inline mapFoldi folder state xs =
+    Seq.mapFold
+      (fun (i, state) x -> let result, state = folder i state x in result, (i+1, state))
+      (0, state)
+      xs
+    |> Tuple.map2 id snd
 
 module Array =
   let inline skipSafe length xs =
@@ -65,8 +107,25 @@ module Array =
     else if Array.length xs = length then Some xs
     else None
 
+  let inline tryFold folder state xs =
+    Array.fold (fun state x -> match state with Some s -> folder s x | None -> None) (Some state) xs
+
+  let inline foldWhile condition folder state xs =
+    Array.fold
+      (fun (cond, state) x -> if cond && condition x then true, folder state x else false, state)
+      (true, state)
+      xs
+    |> snd
+
   let inline foldi folder state xs =
     Array.fold (fun (i, state) x -> (i + 1, folder i state x)) (0, state) xs |> snd
+
+  let inline mapFoldi folder state xs =
+    Array.mapFold
+      (fun (i, state) x -> let result, state = folder i state x in result, (i+1, state))
+      (0, state)
+      xs
+    |> Tuple.map2 id snd
 
 module Map =
   open FSharp.Collections
