@@ -174,12 +174,18 @@ module String =
   let inline substring startIndex endIndex (str: string) = str.Substring(startIndex, endIndex)
 
 #if !NETSTANDARD1_6
-  let inline normalize (nfo: NormalizationForm option) (str: string) = 
-    match nfo with Some nf -> str.Normalize nf | None -> str.Normalize()
+  let inline normalize (str: string) = str.Normalize()
+  
+  let inline normalizeWithForm (nf: NormalizationForm) (str: string) = 
+    str.Normalize nf
 
   let inline toLower (ci: CultureInfo) (str: string) = str.ToLower ci
 
   let inline toUpper (ci: CultureInfo) (str: string) = str.ToUpper ci
+#else
+  let inline toLower (ci: CultureInfo) (str: string) = ci.TextInfo.ToLower str
+
+  let inline toUpper (ci: CultureInfo) (str: string) = ci.TextInfo.ToUpper str
 #endif
 
   let inline toLowerInvariant (str: string) = str.ToLowerInvariant()
