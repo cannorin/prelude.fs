@@ -16,6 +16,7 @@ module Convert =
     digits |> Seq.foldi (fun i sum x ->
       sum + (int x - int '0') * pown 10 (len - i)) 0
 
+#if !NETSTANDARD1_6
 module Shell =
   open System.Diagnostics
 
@@ -94,3 +95,4 @@ module Shell =
       do p.WaitForExit() 
       return p.ExitCode
     }
+#endif

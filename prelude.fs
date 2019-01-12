@@ -173,14 +173,16 @@ module String =
 
   let inline substring startIndex endIndex (str: string) = str.Substring(startIndex, endIndex)
 
+#if !NETSTANDARD1_6
   let inline normalize (nfo: NormalizationForm option) (str: string) = 
     match nfo with Some nf -> str.Normalize nf | None -> str.Normalize()
 
   let inline toLower (ci: CultureInfo) (str: string) = str.ToLower ci
 
-  let inline toLowerInvariant (str: string) = str.ToLowerInvariant()
-
   let inline toUpper (ci: CultureInfo) (str: string) = str.ToUpper ci
+#endif
+
+  let inline toLowerInvariant (str: string) = str.ToLowerInvariant()
 
   let inline toUpperInvariant (str: string) = str.ToUpperInvariant()
 
@@ -1057,6 +1059,7 @@ module Convert =
     digits |> Seq.foldi (fun i sum x ->
       sum + (int x - int '0') * pown 10 (len - i)) 0
 
+#if !NETSTANDARD1_6
 module Shell =
   open System.Diagnostics
 
@@ -1135,4 +1138,5 @@ module Shell =
       do p.WaitForExit() 
       return p.ExitCode
     }
+#endif
 
