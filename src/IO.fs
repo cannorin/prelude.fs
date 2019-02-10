@@ -3,7 +3,6 @@ open System
 open System.IO
 
 module Path =
-
   let inline combine x y = Path.Combine(x, y)
 
   let inline combineMany xs = Path.Combine <| Seq.toArray xs
@@ -21,6 +20,9 @@ module Path =
       path.MakeRelativeUri(filePath)
       |> to_s
       |> String.replace '/' Path.DirectorySeparatorChar)
+
+  let inline changeExtensionTo extension path =
+    Path.ChangeExtension(path, extension)
 
 module File =
   let inline isHidden path =

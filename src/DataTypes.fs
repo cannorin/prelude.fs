@@ -5,19 +5,17 @@ module Lazy =
 
   let inline force (x: Lazy<_>) = x.Force()
   
-  let inline bind (f: 'a -> Lazy<'b>) (x: Lazy<'a>) : Lazy<'b> =
-    Lazy<_>.Create (fun () -> x |> force |> f |> force)
+  let inline bind (f: 'a -> Lazy<'b>) (x: Lazy<'a>) : Lazy<'b> = lazy (f x.Value).Value
 
-  let inline returnValue x =
-    Lazy<_>.CreateFromValue x
+  let inline returnValue x = Lazy<_>.CreateFromValue x
 
-  let inline returnThunk thunk =
-    Lazy<_>.Create thunk
+  let inline returnThunk thunk = Lazy<_>.Create thunk
 
-  let inline map (f: 'a -> 'b) (x: Lazy<'a>) =
-    lazy (f x.Value)
+  let inline map (f: 'a -> 'b) (x: Lazy<'a>) = lazy (f x.Value)
 
   let inline flatten (x: Lazy<Lazy<'a>>) = lazy (!!(!!x))
+
+  let inline apply (f: Lazy<'a -> 'b>) (x: Lazy<'a>) = lazy (!!f !!x)
 
 module Tuple =
   let inline map2 f g (x, y) = (f x, g y)

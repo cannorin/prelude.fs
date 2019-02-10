@@ -33,9 +33,19 @@ module ToplevelOperators =
 
   let inline (?|) opt df = defaultArg opt df
 
-  let inline (!!) (x: Lazy<'a>) = x.Value
+  let inline (!!) (x: ^X) = (^X: (member Value: _) x)
 
-  let inline undefined (x: 'a) : 'b = NotImplementedException(to_s x) |> raise
+  let inline item1 (x: ^X) = (^X: (member Item1: _) x)
+  let inline item2 (x: ^X) = (^X: (member Item2: _) x)
+  let inline item3 (x: ^X) = (^X: (member Item3: _) x)
+  let inline item4 (x: ^X) = (^X: (member Item4: _) x)
+  let inline item5 (x: ^X) = (^X: (member Item5: _) x)
+  let inline item6 (x: ^X) = (^X: (member Item6: _) x)
+  let inline item7 (x: ^X) = (^X: (member Item7: _) x)
+
+  let inline undefined () = NotImplementedException() |> raise
+
+  let inline notImplemented message = NotImplementedException(message) |> raise
 
   let inline reraise' ex = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw(); failwith "impossible"
 
@@ -50,8 +60,30 @@ module ToplevelOperators =
   let inline cprintfn color format =
     Printf.kprintf (fun s -> use c = ccl color in printfn "%s" s) format
 
+  let inline flip f a b = f b a
+
+  let inline tee f x = f x |> ignore; x
+
+  let inline repeat n f x =
+    let rec t i f acc =
+      if i <= 0 then acc else t (i-1) f (f acc)
+    t n f x
+
+  let inline teefn format x =
+    Printf.kprintf (fun s -> printfn "%s" s; x) format x
+
   let inline dispose (disp: #System.IDisposable) =
     match disp with null -> () | x -> x.Dispose()
+
+  let inline memoize f =
+    let mutable map = Map.empty
+    fun x ->
+      match (map :> Collections.Generic.IDictionary<_, _>).TryGetValue(x) with
+        | true, v -> v
+        | _ ->
+          let result = f x
+          map <- map |> Map.add x result
+          result
 
   let inline implicit (x: ^a) : ^b = ((^a or ^b) : (static member op_Implicit: ^a -> ^b) x)
 
@@ -293,19 +325,17 @@ module Lazy =
 
   let inline force (x: Lazy<_>) = x.Force()
   
-  let inline bind (f: 'a -> Lazy<'b>) (x: Lazy<'a>) : Lazy<'b> =
-    Lazy<_>.Create (fun () -> x |> force |> f |> force)
+  let inline bind (f: 'a -> Lazy<'b>) (x: Lazy<'a>) : Lazy<'b> = lazy (f x.Value).Value
 
-  let inline returnValue x =
-    Lazy<_>.CreateFromValue x
+  let inline returnValue x = Lazy<_>.CreateFromValue x
 
-  let inline returnThunk thunk =
-    Lazy<_>.Create thunk
+  let inline returnThunk thunk = Lazy<_>.Create thunk
 
-  let inline map (f: 'a -> 'b) (x: Lazy<'a>) =
-    lazy (f x.Value)
+  let inline map (f: 'a -> 'b) (x: Lazy<'a>) = lazy (f x.Value)
 
   let inline flatten (x: Lazy<Lazy<'a>>) = lazy (!!(!!x))
+
+  let inline apply (f: Lazy<'a -> 'b>) (x: Lazy<'a>) = lazy (!!f !!x)
 
 module Tuple =
   let inline map2 f g (x, y) = (f x, g y)
@@ -808,32 +838,39 @@ module ValueOptionExtension =
 // from: ComputationExpressions.fs
 [<AutoOpen>]
 module ComputationExpressions =
+  open System
   open System.Linq
 
   (*
-    // boilerplate for strict monads to add delay/try
-
-    member inline this.Delay f = f
+    // boilerplate for strict monads
+    member inline this.Delay f = f : unit -> _
     member inline this.Undelay f = f()
     member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
-    
-
-    // boilerplate for any monad to add for/while
-    
-    member inline this.Zero () = this.Return ()
     member inline this.Using (disp: #System.IDisposable, m) =
       this.TryFinally(
         this.Delay(fun () -> m disp),
         fun () -> dispose disp
       )
+    member inline this.Combine (a, b) = this.Bind (a, fun () -> b ())
+    member inline this.While (cond, body: unit -> _) =
+      let rec loop cond m =
+        if cond () then this.Combine(this.Undelay m, fun () -> loop cond m)
+        else this.Zero ()
+      loop cond body
+
+    // boilerplate for delayed monads
     member inline this.Combine (a, b) = this.Bind (a, fun () -> b)
     member inline this.While (cond, m) =
-      let rec loop cond m =
-        if cond () then this.Combine(this.Undelay m, loop cond m)
+      let rec loop cond m () =
+        if cond () then this.Combine(this.Undelay m, loop cond m ())
         else this.Zero ()
-      loop cond m
+      this.Delay (loop cond m
+
+    // boilerplate for any monads
+    member inline this.Yield x = this.Return x
+    member inline this.Zero () = this.Return ()
     member inline this.For (xs: #seq<_>, exec) =
       this.Using(
         (xs :> seq<_>).GetEnumerator(),
@@ -844,29 +881,59 @@ module ComputationExpressions =
       )
   *)
 
+  type NothingBuilder() =
+    member inline this.Bind(m, f) = f m
+    member inline this.Return x = x
+    member inline this.ReturnFrom x = x
+    member inline this.Delay f = f : unit -> _
+    member inline this.Undelay f = f()
+    member inline this.Run f = f()
+    member inline this.TryWith (f, h) = try f() with exn -> h exn
+    member inline this.TryFinally (f, h) = try f() finally h()
+    member inline this.Using (disp: #System.IDisposable, m) =
+      this.TryFinally(
+        this.Delay(fun () -> m disp),
+        fun () -> dispose disp
+      )
+    member inline this.Combine (a, b) = this.Bind (a, fun () -> b ())
+    member inline this.Zero () = this.Return ()
+    member inline this.While (cond, body: unit -> _) =
+      let rec loop cond m =
+        if cond () then this.Combine(this.Undelay m, fun () -> loop cond m)
+        else this.Zero ()
+      loop cond body
+    member inline this.Yield x = this.Return x
+    member inline this.For (xs: #seq<_>, exec) =
+      this.Using(
+        (xs :> seq<_>).GetEnumerator(),
+        fun en ->
+          this.While(
+            en.MoveNext,
+            this.Delay(fun () -> exec en.Current))
+      )
+
   type OptionBuilder() =
     member inline this.Bind(m, f) = Option.bind f m
     member inline this.Return x = Some x
-    member inline this.ReturnFrom x = x
-    
-    member inline this.Delay f = f
+    member inline this.ReturnFrom (x: _ option) = x
+    member inline this.Delay f = f : unit -> _
     member inline this.Undelay f = f()
     member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
-
-    member inline this.Zero () = this.Return ()
     member inline this.Using (disp: #System.IDisposable, m) =
       this.TryFinally(
         this.Delay(fun () -> m disp),
         fun () -> dispose disp
       )
-    member inline this.Combine (a, b) = this.Bind (a, fun () -> b)
-    member inline this.While (cond, m) =
+    member inline this.Combine (a, b) = this.Bind (a, fun () -> b ())
+    member inline this.Zero () = this.Return ()
+    member inline this.While (cond, body: unit -> _) =
       let rec loop cond m =
-        if cond () then this.Combine(this.Undelay m, loop cond m)
+        if cond () then this.Combine(this.Undelay m, fun () -> loop cond m)
         else this.Zero ()
-      loop cond m
+      loop cond body
+    member inline this.Yield x = this.Return x
     member inline this.For (xs: #seq<_>, exec) =
       this.Using(
         (xs :> seq<_>).GetEnumerator(),
@@ -875,30 +942,29 @@ module ComputationExpressions =
             en.MoveNext,
             this.Delay(fun () -> exec en.Current))
       )
-  
+
   type ResultBuilder() =
     member inline this.Bind(m, f) = Result.bind f m
     member inline this.Return x = Ok x
-    member inline this.ReturnFrom x = x
-    
-    member inline this.Delay f = f
+    member inline this.ReturnFrom (x: Result<_, _>) = x
+    member inline this.Delay f = f : unit -> _
     member inline this.Undelay f = f()
     member inline this.Run f = f()
     member inline this.TryWith (f, h) = try f() with exn -> h exn
     member inline this.TryFinally (f, h) = try f() finally h()
-    
-    member inline this.Zero () = this.Return ()
     member inline this.Using (disp: #System.IDisposable, m) =
       this.TryFinally(
         this.Delay(fun () -> m disp),
         fun () -> dispose disp
       )
-    member inline this.Combine (a, b) = this.Bind (a, fun () -> b)
-    member inline this.While (cond, m) =
+    member inline this.Combine (a, b) = this.Bind (a, fun () -> b ())
+    member inline this.Zero () = this.Return ()
+    member inline this.While (cond, body: unit -> _) =
       let rec loop cond m =
-        if cond () then this.Combine(this.Undelay m, loop cond m)
+        if cond () then this.Combine(this.Undelay m, fun () -> loop cond m)
         else this.Zero ()
-      loop cond m
+      loop cond body
+    member inline this.Yield x = this.Return x
     member inline this.For (xs: #seq<_>, exec) =
       this.Using(
         (xs :> seq<_>).GetEnumerator(),
@@ -907,32 +973,33 @@ module ComputationExpressions =
             en.MoveNext,
             this.Delay(fun () -> exec en.Current))
       )
-  
 
   type LazyBuilder() =
     member inline this.Bind(m, f) = Lazy.bind f m
     member inline this.Return x = lazy x
     member inline this.ReturnFrom m = m
 
-    member inline this.Delay f = this.Bind(this.Return (), f)
+    member inline this.Delay (f: unit -> Lazy<_>) = lazy f().Value
     member inline this.Undelay x = x
     member inline this.TryWith (m, f) =
       lazy (try Lazy.force m with exn -> f exn)
     member inline this.TryFinally (m, f) =
       lazy (try Lazy.force m finally f() )
-    
+
+    member inline this.Combine (a, b) = this.Bind (a, fun () -> b)
     member inline this.Zero () = this.Return ()
+    member inline this.While (cond, m) =
+      let rec loop cond m () =
+        if cond () then this.Combine(this.Undelay m, loop cond m ())
+        else this.Zero ()
+      this.Delay (loop cond m)
+    
     member inline this.Using (disp: #System.IDisposable, m) =
       this.TryFinally(
         this.Delay(fun () -> m disp),
         fun () -> dispose disp
       )
-    member inline this.Combine (a, b) = this.Bind (a, fun () -> b)
-    member inline this.While (cond, m) =
-      let rec loop cond m =
-        if cond () then this.Combine(this.Undelay m, loop cond m)
-        else this.Zero ()
-      loop cond m
+    member inline this.Yield x = this.Return x
     member inline this.For (xs: #seq<_>, exec) =
       this.Using(
         (xs :> seq<_>).GetEnumerator(),
@@ -941,6 +1008,15 @@ module ComputationExpressions =
             en.MoveNext,
             this.Delay(fun () -> exec en.Current))
       )
+
+  type NullSafeBuilder() =
+    inherit OptionBuilder()
+    member inline this.Bind (m: Nullable<'a>, f: 'a -> 'b option) =
+      if m.HasValue then f m.Value else None
+    member inline this.Bind (m: Result<'a, _>, f) =
+      match m with Ok x -> f x | Error _ -> None
+    member inline this.Bind (m: 'a, f: 'a -> 'b option) : _ when 'a: null =
+      match m with null -> None | x -> f x
 
   open System.Threading.Tasks
   type AsyncBuilder with
@@ -951,17 +1027,17 @@ module ComputationExpressions =
 
   [<RequireQualifiedAccess>]
   module Do =
+    let nothing = NothingBuilder()
     let option = OptionBuilder()
     let result = ResultBuilder()
     let lazy'  = LazyBuilder()
-
+    let nullsafe = NullSafeBuilder()
 
 // from: IO.fs
 open System
 open System.IO
 
 module Path =
-
   let inline combine x y = Path.Combine(x, y)
 
   let inline combineMany xs = Path.Combine <| Seq.toArray xs
@@ -979,6 +1055,9 @@ module Path =
       path.MakeRelativeUri(filePath)
       |> to_s
       |> String.replace '/' Path.DirectorySeparatorChar)
+
+  let inline changeExtensionTo extension path =
+    Path.ChangeExtension(path, extension)
 
 module File =
   let inline isHidden path =
