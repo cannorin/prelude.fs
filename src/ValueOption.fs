@@ -1,5 +1,6 @@
 namespace Prelude
 
+#if !DISABLE_VALUEOPTION
 module ValueOption =
   let inline get option =
     match option with ValueNone -> invalidArg "option" "value was ValueNone" | ValueSome x -> x
@@ -228,3 +229,4 @@ module ValueOptionExtension =
             | ValueSome x -> newMap |> Map.add k x
             | ValueNone   -> newMap
       ) Map.empty
+#endif

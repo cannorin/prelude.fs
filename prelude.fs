@@ -55,10 +55,10 @@ module ToplevelOperators =
         member x.Dispose() = Console.ResetColor() }
 
   let inline cprintf color format =
-    Printf.kprintf (fun s -> use c = ccl color in printf "%s" s) format
+    Printf.kprintf (fun s -> use __ = ccl color in printf "%s" s) format
 
   let inline cprintfn color format =
-    Printf.kprintf (fun s -> use c = ccl color in printfn "%s" s) format
+    Printf.kprintf (fun s -> use __ = ccl color in printfn "%s" s) format
 
   let inline flip f a b = f b a
 
@@ -92,6 +92,9 @@ module ToplevelOperators =
 
   let inline pred (n: ^number) =
     n - LanguagePrimitives.GenericOne< ^number >
+
+  /// type annotation operator
+  let inline annotate<'X> (x: 'X) = x
 
 // from: Interop.fs
 open System
@@ -606,6 +609,7 @@ module Dict =
   let inline toSeq (xs: #dict<_, _>) = xs :> seq<kvp<_, _>>
 
 // from: ValueOption.fs
+#if !DISABLE_VALUEOPTION
 module ValueOption =
   let inline get option =
     match option with ValueNone -> invalidArg "option" "value was ValueNone" | ValueSome x -> x
@@ -834,6 +838,7 @@ module ValueOptionExtension =
             | ValueSome x -> newMap |> Map.add k x
             | ValueNone   -> newMap
       ) Map.empty
+#endif
 
 // from: ComputationExpressions.fs
 [<AutoOpen>]

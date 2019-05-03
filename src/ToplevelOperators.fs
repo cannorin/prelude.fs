@@ -29,10 +29,10 @@ module ToplevelOperators =
         member x.Dispose() = Console.ResetColor() }
 
   let inline cprintf color format =
-    Printf.kprintf (fun s -> use c = ccl color in printf "%s" s) format
+    Printf.kprintf (fun s -> use __ = ccl color in printf "%s" s) format
 
   let inline cprintfn color format =
-    Printf.kprintf (fun s -> use c = ccl color in printfn "%s" s) format
+    Printf.kprintf (fun s -> use __ = ccl color in printfn "%s" s) format
 
   let inline flip f a b = f b a
 
@@ -66,3 +66,6 @@ module ToplevelOperators =
 
   let inline pred (n: ^number) =
     n - LanguagePrimitives.GenericOne< ^number >
+
+  /// type annotation operator
+  let inline annotate<'X> (x: 'X) = x
