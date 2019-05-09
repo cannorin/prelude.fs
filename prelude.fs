@@ -389,8 +389,11 @@ module Async =
   open Microsoft.FSharp.Control
 
   let inline run x = Async.RunSynchronously x
-  let inline returnValue x = async { return x }
-  let inline bind f m = async { let! x = m in return! f x }
+  let inline returnValue x = async.Return x
+  let inline bind f m = async.Bind(m, f)
+  let inline map  f m = bind (f >> returnValue) m
+  let never = Async.Sleep -1
+  let unit  = returnValue ()
 
   let inline timeout (timeout : TimeSpan) a =
     async {
