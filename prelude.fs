@@ -87,6 +87,9 @@ module ToplevelOperators =
 
   let inline implicit (x: ^a) : ^b = ((^a or ^b) : (static member op_Implicit: ^a -> ^b) x)
 
+  let inline zero< ^n when ^n: (static member Zero: ^n) > =
+    LanguagePrimitives.GenericZero< ^n >
+
   let inline succ (n: ^number) =
     n + LanguagePrimitives.GenericOne< ^number >
 
