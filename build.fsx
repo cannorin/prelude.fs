@@ -62,6 +62,7 @@ let concatSources path =
       let fileName = x.Attribute(xname "Include").Value
       let path = Path.getDirectory path @@ fileName
       fileName, File.read path)
+    |> Seq.filter (fun (fileName, _) -> fileName <> "AssemblyInfo.fs")
     |> Seq.cache
   
   if sources |> Seq.isEmpty then
@@ -108,6 +109,43 @@ let concatSources path =
   Trace.tracefn "generating '%s'..." path
   File.write false path source
 
+type Date = System.DateTimeOffset
+
+let (|Regex|_|) pattern input =
+  let m = Regex.Match(input, pattern)
+  if m.Success then Some(List.tail [ for g in m.Groups -> g.Value ])
+  else None
+
+let loadReleaseNoteWithAutoIncrement releaseNote =
+  let y2k = Date.Parse "1/1/2010+0000"
+  let today = Date.UtcNow
+  let dayssincey2k = (today - y2k).Days
+  let secs = today.TimeOfDay.TotalSeconds |> int |> (/) <| 2
+  let lines = File.read releaseNote
+  let topLine =
+    match (lines |> Seq.tryHead) with
+      | Some (Regex @"^(\*|\#\# New in) ([0-9]+)\.([0-9]+)\.([0-9]+)(?:\.\*) (.+)$" [head; maj; min; rev; tail]) ->
+        sprintf "%s %s.%s.%s.%i %s" head maj min rev (today.DayOfYear * 10000 + secs) tail
+      | Some (Regex @"^(\*|\#\# New in) ([0-9]+)\.([0-9]+)(?:\.\*) (.+)$" [head; maj; min; tail]) ->
+        sprintf "%s %s.%s.%i.%i %s" head maj min dayssincey2k secs tail
+      | Some x -> x
+      | None ->
+        sprintf "0.%i.%i.%i" (today.Year - 2000) today.DayOfYear secs
+  lines |> Seq.mapi (fun i x -> if i = 0 then topLine else x)
+        |> ReleaseNotes.parse
+
+// Read additional information from the release notes document
+let release = loadReleaseNoteWithAutoIncrement "RELEASE_NOTES.md"
+
+release.AssemblyVersion |> Trace.tracefn "Auto version: %s"
+
+Target.create "WriteVersion" (fun _ ->
+  AssemblyInfoFile.createFSharp "./src/AssemblyInfo.fs" [
+    AssemblyInfo.Version release.AssemblyVersion
+    AssemblyInfo.FileVersion release.AssemblyVersion
+  ]
+)
+
 Target.create "Clean" (fun _ ->
   !! "src/**/bin"
   ++ "src/**/obj"
@@ -125,11 +163,30 @@ Target.create "Concat" (fun _ ->
   |> Seq.iter concatSources
 )
 
+Target.create "Pack" (fun _ ->
+  !! "src/**/*.*proj"
+  |> Seq.iter (DotNet.pack (fun opt ->
+    { opt with
+        Configuration = DotNet.BuildConfiguration.Release
+        OutputPath = Some "../bin/packages/"
+        MSBuildParams = {
+          opt.MSBuildParams with
+            Properties = [
+              "PackageVersion", release.NugetVersion
+            ] @ opt.MSBuildParams.Properties
+        }
+    }
+  ))
+)
+
+
 Target.create "All" ignore
 
 "Clean"
+  ==> "WriteVersion"
   ==> "Build"
   ==> "Concat"
+  ==> "Pack"
   ==> "All"
 
 Target.runOrDefault "All"

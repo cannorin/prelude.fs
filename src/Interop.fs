@@ -21,6 +21,27 @@ module Action =
   let inline toFSharp2 (f: Action<_, _>) x y = f.Invoke(x, y)
   let inline toFSharp3 (f: Action<_, _, _>) x y z = f.Invoke(x, y, z)
 
+[<AutoOpen>]
+module DelegateExtensions =
+  type Func =
+    static member inline ofFSharp f = Func.ofFSharp0 f
+    static member inline ofFSharp f = Func.ofFSharp1 f
+    static member inline ofFSharp f = Func.ofFSharp2 f
+    static member inline ofFSharp f = Func.ofFSharp3 f
+    static member inline toFSharp f = Func.toFSharp0 f
+    static member inline toFSharp f = Func.toFSharp1 f
+    static member inline toFSharp f = Func.toFSharp2 f
+    static member inline toFSharp f = Func.toFSharp3 f
+  type Action =
+    static member inline ofFSharp f = Action.ofFSharp0 f
+    static member inline ofFSharp f = Action.ofFSharp1 f
+    static member inline ofFSharp f = Action.ofFSharp2 f
+    static member inline ofFSharp f = Action.ofFSharp3 f
+    static member inline toFSharp f = Action.toFSharp0 f
+    static member inline toFSharp f = Action.toFSharp1 f
+    static member inline toFSharp f = Action.toFSharp2 f
+    static member inline toFSharp f = Action.toFSharp3 f
+
 module Flag =
   let inline combine (xs: ^flag seq) : ^flag
     when ^flag: enum<int> =
@@ -39,10 +60,10 @@ module Number =
     else
       None
 
-  let inline tryParseWith< ^T when ^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) > str styleo formato : ^T option =
+  let inline tryParseWith< ^T when ^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) > str (styleo: NumberStyles option) (formato: IFormatProvider option) : ^T option =
     let mutable ret = Unchecked.defaultof<_> in
     let style = styleo ?| NumberStyles.None in
-    let format = formato ?| CultureInfo.InvariantCulture in
+    let format = formato ?| (CultureInfo.InvariantCulture :> IFormatProvider) in
     if (^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) (str, style, format, &ret)) then
       Some ret
     else

@@ -192,7 +192,7 @@ module ComputationExpressions =
   [<RequireQualifiedAccess>]
   module Do =
     let nothing = NothingBuilder()
-    let option = OptionBuilder()
-    let result = ResultBuilder()
-    let lazy'  = LazyBuilder()
+    let option  = OptionBuilder()
+    let result  = ResultBuilder()
+    let lazily  = LazyBuilder()
     let nullsafe = NullSafeBuilder()

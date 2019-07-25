@@ -20,6 +20,7 @@ module Patterns =
     type kvp<'a, 'b> = KeyValuePair<'a, 'b>
     let inline KVP (a, b) = kvp(a, b)
     let (|KVP|) (x: kvp<_, _>) = (x.Key, x.Value)
+    let (|KeyValuePair|) (x: KeyValuePair<_, _>) = (x.Key, x.Value)
 
   [<AutoOpen>]
   module Nat =

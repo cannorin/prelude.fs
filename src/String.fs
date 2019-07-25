@@ -93,13 +93,14 @@ module String =
   let inline splitSeqSkipEmpty (sp: ^T seq) (s: ^String) =
     (^String: (member Split: ^T array -> StringSplitOptions -> ^String array) (s, Seq.toArray sp, StringSplitOptions.RemoveEmptyEntries))
 
-  let inline removeEmptyEntries (sp: string array) = sp |> Array.filter (String.IsNullOrEmpty >> not)
-
   let inline toChars (s: string) = s.ToCharArray()
 
   let inline ofChars (chars: #seq<char>) = System.String.Concat chars
 
-  let inline nth i (str: string) = str.[i]
+  let inline item i (str: string) = str.[i]
+
+  let inline tryItem (index: int) (source: string) =
+    if index >= 0 && index < source.Length then Some source.[index] else None
 
   let inline rev (str: string) = 
     new String(str.ToCharArray() |> Array.rev)
@@ -109,25 +110,29 @@ module String =
       ""
     else
       let mutable i = 0
-      while i < String.length str && str |> nth i |> pred do i <- i + 1 done
+      while i < String.length str && str |> item i |> pred do i <- i + 1 done
       if i = 0 then ""
       else str |> act i
 
-  let inline take i str =
-    if i = 0 then ""
-    else if i >= String.length str then str
-    else removeAfter i str
+  let inline take count (source: string) = source.[..count-1]
 
-  let inline skip i str =
-    if i = 0 then str
-    else if i >= String.length str then ""
-    else substringAfter i str
+  let inline skip count (source: string) = source.[count..]
 
   let inline takeWhile predicate (str: string) =
     whileBase predicate take str
 
   let inline skipWhile predicate (str: string) =
     whileBase predicate skip str
+
+  let inline truncate count (source: string) =
+    if count < 1 then String.Empty
+    else if String.length source <= count then source
+    else take count source
+
+  let inline drop     count (source: string) =
+    if count < 1 then source
+    else if String.length source >= count then String.Empty
+    else skip count source
 
   let inline build (builder: StringBuilder -> unit) =
     let sb = new StringBuilder()

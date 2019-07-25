@@ -1,4 +1,5 @@
 namespace Prelude
+
 open System
 open System.IO
 
@@ -11,14 +12,14 @@ module Path =
     let filePath = new Uri(file)
     let path =
       new Uri (
-        if (parentDir |> String.endsWith (to_s Path.DirectorySeparatorChar) |> not) then
+        if (parentDir |> String.endsWith (string Path.DirectorySeparatorChar) |> not) then
           sprintf "%s%c" parentDir Path.DirectorySeparatorChar
         else
           parentDir
       )
     Uri.UnescapeDataString(
       path.MakeRelativeUri(filePath)
-      |> to_s
+      |> string
       |> String.replace '/' Path.DirectorySeparatorChar)
 
   let inline changeExtensionTo extension path =

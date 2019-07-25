@@ -3,7 +3,6 @@ namespace Prelude
 [<AutoOpen>]
 module ToplevelOperators =
   open System
-  let inline to_s x = x.ToString()
 
   let inline (?|) opt df = defaultArg opt df
 
@@ -38,6 +37,8 @@ module ToplevelOperators =
 
   let inline tee f x = f x |> ignore; x
 
+  let inline konst a b = b
+
   let inline repeat n f x =
     let rec t i f acc =
       if i <= 0 then acc else t (i-1) f (f acc)
@@ -52,7 +53,7 @@ module ToplevelOperators =
   let inline memoize f =
     let mutable map = Map.empty
     fun x ->
-      match (map :> Collections.Generic.IDictionary<_, _>).TryGetValue(x) with
+      match map.TryGetValue(x) with
         | true, v -> v
         | _ ->
           let result = f x

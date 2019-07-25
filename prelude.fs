@@ -29,7 +29,6 @@ module internal Prelude
 [<AutoOpen>]
 module ToplevelOperators =
   open System
-  let inline to_s x = x.ToString()
 
   let inline (?|) opt df = defaultArg opt df
 
@@ -64,6 +63,8 @@ module ToplevelOperators =
 
   let inline tee f x = f x |> ignore; x
 
+  let inline konst a b = b
+
   let inline repeat n f x =
     let rec t i f acc =
       if i <= 0 then acc else t (i-1) f (f acc)
@@ -78,7 +79,7 @@ module ToplevelOperators =
   let inline memoize f =
     let mutable map = Map.empty
     fun x ->
-      match (map :> Collections.Generic.IDictionary<_, _>).TryGetValue(x) with
+      match map.TryGetValue(x) with
         | true, v -> v
         | _ ->
           let result = f x
@@ -122,6 +123,27 @@ module Action =
   let inline toFSharp2 (f: Action<_, _>) x y = f.Invoke(x, y)
   let inline toFSharp3 (f: Action<_, _, _>) x y z = f.Invoke(x, y, z)
 
+[<AutoOpen>]
+module DelegateExtensions =
+  type Func =
+    static member inline ofFSharp f = Func.ofFSharp0 f
+    static member inline ofFSharp f = Func.ofFSharp1 f
+    static member inline ofFSharp f = Func.ofFSharp2 f
+    static member inline ofFSharp f = Func.ofFSharp3 f
+    static member inline toFSharp f = Func.toFSharp0 f
+    static member inline toFSharp f = Func.toFSharp1 f
+    static member inline toFSharp f = Func.toFSharp2 f
+    static member inline toFSharp f = Func.toFSharp3 f
+  type Action =
+    static member inline ofFSharp f = Action.ofFSharp0 f
+    static member inline ofFSharp f = Action.ofFSharp1 f
+    static member inline ofFSharp f = Action.ofFSharp2 f
+    static member inline ofFSharp f = Action.ofFSharp3 f
+    static member inline toFSharp f = Action.toFSharp0 f
+    static member inline toFSharp f = Action.toFSharp1 f
+    static member inline toFSharp f = Action.toFSharp2 f
+    static member inline toFSharp f = Action.toFSharp3 f
+
 module Flag =
   let inline combine (xs: ^flag seq) : ^flag
     when ^flag: enum<int> =
@@ -140,10 +162,10 @@ module Number =
     else
       None
 
-  let inline tryParseWith< ^T when ^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) > str styleo formato : ^T option =
+  let inline tryParseWith< ^T when ^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) > str (styleo: NumberStyles option) (formato: IFormatProvider option) : ^T option =
     let mutable ret = Unchecked.defaultof<_> in
     let style = styleo ?| NumberStyles.None in
-    let format = formato ?| CultureInfo.InvariantCulture in
+    let format = formato ?| (CultureInfo.InvariantCulture :> IFormatProvider) in
     if (^T: (static member TryParse: string -> NumberStyles -> IFormatProvider -> ^T byref -> bool) (str, style, format, &ret)) then
       Some ret
     else
@@ -170,6 +192,7 @@ module Patterns =
     type kvp<'a, 'b> = KeyValuePair<'a, 'b>
     let inline KVP (a, b) = kvp(a, b)
     let (|KVP|) (x: kvp<_, _>) = (x.Key, x.Value)
+    let (|KeyValuePair|) (x: KeyValuePair<_, _>) = (x.Key, x.Value)
 
   [<AutoOpen>]
   module Nat =
@@ -273,13 +296,14 @@ module String =
   let inline splitSeqSkipEmpty (sp: ^T seq) (s: ^String) =
     (^String: (member Split: ^T array -> StringSplitOptions -> ^String array) (s, Seq.toArray sp, StringSplitOptions.RemoveEmptyEntries))
 
-  let inline removeEmptyEntries (sp: string array) = sp |> Array.filter (String.IsNullOrEmpty >> not)
-
   let inline toChars (s: string) = s.ToCharArray()
 
   let inline ofChars (chars: #seq<char>) = System.String.Concat chars
 
-  let inline nth i (str: string) = str.[i]
+  let inline item i (str: string) = str.[i]
+
+  let inline tryItem (index: int) (source: string) =
+    if index >= 0 && index < source.Length then Some source.[index] else None
 
   let inline rev (str: string) = 
     new String(str.ToCharArray() |> Array.rev)
@@ -289,25 +313,29 @@ module String =
       ""
     else
       let mutable i = 0
-      while i < String.length str && str |> nth i |> pred do i <- i + 1 done
+      while i < String.length str && str |> item i |> pred do i <- i + 1 done
       if i = 0 then ""
       else str |> act i
 
-  let inline take i str =
-    if i = 0 then ""
-    else if i >= String.length str then str
-    else removeAfter i str
+  let inline take count (source: string) = source.[..count-1]
 
-  let inline skip i str =
-    if i = 0 then str
-    else if i >= String.length str then ""
-    else substringAfter i str
+  let inline skip count (source: string) = source.[count..]
 
   let inline takeWhile predicate (str: string) =
     whileBase predicate take str
 
   let inline skipWhile predicate (str: string) =
     whileBase predicate skip str
+
+  let inline truncate count (source: string) =
+    if count < 1 then String.Empty
+    else if String.length source <= count then source
+    else take count source
+
+  let inline drop     count (source: string) =
+    if count < 1 then source
+    else if String.length source >= count then String.Empty
+    else skip count source
 
   let inline build (builder: StringBuilder -> unit) =
     let sb = new StringBuilder()
@@ -615,123 +643,55 @@ module Dict =
   let inline toSeq (xs: #dict<_, _>) = xs :> seq<kvp<_, _>>
 
 // from: ValueOption.fs
-#if !DISABLE_VALUEOPTION
 module ValueOption =
-  let inline get option =
-    match option with ValueNone -> invalidArg "option" "value was ValueNone" | ValueSome x -> x
-  
-  let inline isSome option = match option with ValueNone -> false | ValueSome _ -> true
-
-  let inline isNone option = match option with ValueNone -> true  | ValueSome _ -> false
-
-  let inline defaultValue value option = match option with ValueNone -> value | ValueSome v -> v
-
-  let inline defaultWith defThunk option = match option with ValueNone -> defThunk () | ValueSome v -> v
-
-  let inline orElse ifNone option = match option with ValueNone -> ifNone | ValueSome _ -> option
-
-  let inline orElseWith ifNoneThunk option = match option with ValueNone -> ifNoneThunk () | ValueSome _ -> option
-
-  let inline count option = match option with ValueNone -> 0 | ValueSome _ -> 1
-
-  let inline fold<'T,'State> folder (state:'State) (option: voption<'T>) = match option with ValueNone -> state | ValueSome x -> folder state x
-
-  let inline foldBack<'T,'State> folder (option: voption<'T>) (state:'State) =  match option with ValueNone -> state | ValueSome x -> folder x state
-
-  let inline exists predicate option = match option with ValueNone -> false | ValueSome x -> predicate x
-
-  let inline forall predicate option = match option with ValueNone -> true | ValueSome x -> predicate x
-
-  let inline contains value option = match option with ValueNone -> false | ValueSome v -> v = value
-
-  let inline iter action option = match option with ValueNone -> () | ValueSome x -> action x
-
-  let inline map mapping option = match option with ValueNone -> ValueNone | ValueSome x -> ValueSome (mapping x)
-
-  let inline map2 mapping option1 option2 = 
-    match option1, option2 with
-    | ValueSome x, ValueSome y -> ValueSome (mapping x y)
-    | _ -> ValueNone
-
-  let inline map3 mapping option1 option2 option3 = 
-    match option1, option2, option3 with
-    | ValueSome x, ValueSome y, ValueSome z -> ValueSome (mapping x y z)
-    | _ -> ValueNone
-
-  let inline bind binder option = match option with ValueNone -> ValueNone | ValueSome x -> binder x
-
-  let inline flatten option = match option with ValueNone -> ValueNone | ValueSome x -> x
-
-  let inline filter predicate option = match option with ValueNone -> ValueNone | ValueSome x -> if predicate x then ValueSome x else ValueNone
-
-  let inline toArray option = match option with  ValueNone -> [| |] | ValueSome x -> [| x |]
-
-  let inline toList option = match option with  ValueNone -> [ ] | ValueSome x -> [ x ]
-
-  let inline toNullable option = match option with ValueNone -> System.Nullable() | ValueSome v -> System.Nullable(v)
-
-  let inline ofNullable (value:System.Nullable<'T>) = if value.HasValue then ValueSome value.Value else ValueNone
-
-  let inline ofObj value = match value with null -> ValueNone | _ -> ValueSome value
-
-  let inline toObj value = match value with ValueNone -> null | ValueSome x -> x
-
   let inline ofOption option = match option with Some x -> ValueSome x | None -> ValueNone
 
   let inline toOption option = match option with ValueSome x -> Some x | ValueNone -> None
 
-module UseValueOptionAsDefault =
-  let inline Some x = ValueSome x
-  let inline None<'a> : voption<'a> = ValueNone
-  let (|Some|None|) = function
-    | ValueSome x -> Some x
-    | ValueNone   -> None
-  module Option = ValueOption
-
 [<AutoOpen>]
 module ValueOptionExtension =
-  open UseValueOptionAsDefault
   type ValueOption<'T> with
     member inline this.IsSome = ValueOption.isSome this
     member inline this.IsNone = ValueOption.isNone this
 
+module ValueOptionFunctions =
   open System.Collections.Generic
   
   module Array =
     let inline tryLast' (array: _[]) =
-      if array.Length = 0 then None
-      else Some array.[array.Length-1]
+      if array.Length = 0 then ValueNone
+      else ValueSome array.[array.Length-1]
 
     let inline tryHead' (array: _[]) =
-      if array.Length = 0 then None
-      else Some array.[0]
+      if array.Length = 0 then ValueNone
+      else ValueSome array.[0]
 
     let inline tryTake' length xs =
       if Array.length xs > length then
-        Array.take length xs |> Some
-      else if Array.length xs = length then Some xs
-      else None
+        Array.take length xs |> ValueSome
+      else if Array.length xs = length then ValueSome xs
+      else ValueNone
 
     let inline tryItem' index (array: _[]) =
-      if index < 0 || index >= array.Length then None
-      else Some (array.[index])
+      if index < 0 || index >= array.Length then ValueNone
+      else ValueSome (array.[index])
     
     let inline tryFind' predicate (array: _[]) =
       let rec loop i =
-        if i >= array.Length then None else
-        if predicate array.[i] then Some array.[i] else loop (i+1)
+        if i >= array.Length then ValueNone else
+        if predicate array.[i] then ValueSome array.[i] else loop (i+1)
       loop 0
 
     let inline tryFindIndex' predicate (array: _[]) =
       let len = array.Length
-      let rec go n = if n >= len then None elif predicate array.[n] then Some n else go (n+1)
+      let rec go n = if n >= len then ValueNone elif predicate array.[n] then ValueSome n else go (n+1)
       go 0
 
   module IEnumerator =
     let inline tryItem' index (e : IEnumerator<'T>) =
       let rec loop index =
-        if not (e.MoveNext()) then None
-        elif index = 0 then Some(e.Current)
+        if not (e.MoveNext()) then ValueNone
+        elif index = 0 then ValueSome(e.Current)
         else loop (index-1)
       loop index
     
@@ -741,32 +701,32 @@ module ValueOptionExtension =
       if e.MoveNext() then
         let mutable res = e.Current
         while (e.MoveNext()) do res <- e.Current
-        Some res
+        ValueSome res
       else
-        None
+        ValueNone
 
     let inline tryHead' (source : seq<_>) =
       use e = source.GetEnumerator()
-      if (e.MoveNext()) then Some e.Current
-      else None
+      if (e.MoveNext()) then ValueSome e.Current
+      else ValueNone
 
     let inline tryTake' length xs =
       let xs' = xs |> Seq.indexed |> Seq.cache
       if xs' |> Seq.exists (fst >> ((=) (length - 1))) then
-        xs' |> Seq.take length |> Seq.map snd |> Some
-      else None
+        xs' |> Seq.take length |> Seq.map snd |> ValueSome
+      else ValueNone
 
     let inline tryItem' index (source : seq<'T>) =
-      if index < 0 then None else
+      if index < 0 then ValueNone else
       use e = source.GetEnumerator()
       IEnumerator.tryItem' index e
     
     let inline tryFind' predicate (source : seq<'T>)  =
       use e = source.GetEnumerator()
-      let mutable res = None
+      let mutable res = ValueNone
       while (ValueOption.isNone res && e.MoveNext()) do
         let c = e.Current
-        if predicate c then res <- Some(c)
+        if predicate c then res <- ValueSome(c)
       res
 
     let inline tryFindIndex' predicate (source:seq<_>) =
@@ -774,10 +734,10 @@ module ValueOptionExtension =
       let rec loop i =
         if ie.MoveNext() then
           if predicate ie.Current then
-            Some i
+            ValueSome i
           else loop (i+1)
         else
-          None
+          ValueNone
       loop 0
 
     let inline choose' chooser (source: seq<_>) =
@@ -792,35 +752,35 @@ module ValueOptionExtension =
     let inline tryLast' (list: 'T list) =
       let rec loop list =
         match list with
-        | [x] -> Some x
-        | _ :: tail -> loop tail
-        | [] -> None
+          | [x] -> ValueSome x
+          | _ :: tail -> loop tail
+          | [] -> ValueNone
       loop list
 
-    let inline tryHead' list = match list with x::_ -> Some x | [] -> None
+    let inline tryHead' list = match list with x::_ -> ValueSome x | [] -> ValueNone
 
     let inline tryItem' index list =
       let rec loop index list =
         match list with
-        | h::t when index >= 0 ->
-            if index = 0 then Some h else loop (index - 1) t
-        | _ -> None
+          | h::t when index >= 0 ->
+            if index = 0 then ValueSome h else loop (index - 1) t
+          | _ -> ValueNone
       loop index list
 
     let inline tryTake' length xs =
       if List.length xs >= length then
-        List.take length xs |> Some
-      else None
+        List.take length xs |> ValueSome
+      else ValueNone
 
     let inline tryFind' predicate list =
       let rec loop list =
         match list with
-        | [] -> None
-        | h::t -> if predicate h then Some h else loop t
+          | [] -> ValueNone
+          | h::t -> if predicate h then ValueSome h else loop t
       loop list
 
     let inline tryFindIndex' predicate list = 
-      let rec loop n = function[] -> None | h::t -> if predicate h then Some n else loop (n+1) t
+      let rec loop n = function[] -> ValueNone | h::t -> if predicate h then ValueSome n else loop (n+1) t
       loop 0 list
 
     let inline choose' chooser list =
@@ -834,8 +794,8 @@ module ValueOptionExtension =
     let inline tryFind' key (table: Map<_, _>) =
       let mutable v = Unchecked.defaultof<_>
       if table.TryGetValue(key, &v) then
-        Some v
-      else None
+        ValueSome v
+      else ValueNone
 
     let inline choose' c m =
       m |> Map.fold (
@@ -844,7 +804,6 @@ module ValueOptionExtension =
             | ValueSome x -> newMap |> Map.add k x
             | ValueNone   -> newMap
       ) Map.empty
-#endif
 
 // from: ComputationExpressions.fs
 [<AutoOpen>]
@@ -1039,9 +998,9 @@ module ComputationExpressions =
   [<RequireQualifiedAccess>]
   module Do =
     let nothing = NothingBuilder()
-    let option = OptionBuilder()
-    let result = ResultBuilder()
-    let lazy'  = LazyBuilder()
+    let option  = OptionBuilder()
+    let result  = ResultBuilder()
+    let lazily  = LazyBuilder()
     let nullsafe = NullSafeBuilder()
 
 // from: IO.fs
@@ -1057,14 +1016,14 @@ module Path =
     let filePath = new Uri(file)
     let path =
       new Uri (
-        if (parentDir |> String.endsWith (to_s Path.DirectorySeparatorChar) |> not) then
+        if (parentDir |> String.endsWith (string Path.DirectorySeparatorChar) |> not) then
           sprintf "%s%c" parentDir Path.DirectorySeparatorChar
         else
           parentDir
       )
     Uri.UnescapeDataString(
       path.MakeRelativeUri(filePath)
-      |> to_s
+      |> string
       |> String.replace '/' Path.DirectorySeparatorChar)
 
   let inline changeExtensionTo extension path =
@@ -1157,84 +1116,4 @@ module Convert =
     digits |> Seq.foldi (fun i sum x ->
       sum + (int x - int '0') * pown 10 (len - i)) 0
 
-#if !NETSTANDARD1_6
-module Shell =
-  open System.Diagnostics
-
-  let inline eval cmd args =
-    use p = new Process()
-    p.EnableRaisingEvents <- false
-    p.StartInfo.UseShellExecute <- false
-    p.StartInfo.FileName <- cmd
-    p.StartInfo.Arguments <- args |> String.concat " "
-    p.StartInfo.RedirectStandardInput <- true
-    p.StartInfo.RedirectStandardOutput <- true
-    p.Start() |> ignore
-    p.WaitForExit()
-    p.StandardOutput.ReadToEnd()
-
-  let inline evalAsync cmd args =
-    async {
-      use p = new Process()
-      do p.EnableRaisingEvents <- false
-      do p.StartInfo.UseShellExecute <- false
-      do p.StartInfo.FileName <- cmd
-      do p.StartInfo.Arguments <- args |> String.concat " "
-      do p.StartInfo.RedirectStandardInput <- true
-      do p.StartInfo.RedirectStandardOutput <- true
-      do p.Start() |> ignore
-      do p.WaitForExit()
-      return p.StandardOutput.ReadToEnd()
-    }
-
-  let inline pipe cmd args (stdin: string) =
-    use p = new Process()
-    p.EnableRaisingEvents <- false
-    p.StartInfo.UseShellExecute <- false
-    p.StartInfo.FileName <- cmd
-    p.StartInfo.Arguments <- args |> String.concat " "
-    p.StartInfo.RedirectStandardInput <- true
-    p.StartInfo.RedirectStandardOutput <- true
-    p.Start() |> ignore
-    p.StandardInput.WriteLine stdin
-    p.WaitForExit()
-    p.StandardOutput.ReadToEnd()
-
-  let inline pipeAsync cmd args (stdin: string) =
-    async {
-      use p = new Process()
-      do p.EnableRaisingEvents <- false
-      do p.StartInfo.UseShellExecute <- false
-      do p.StartInfo.FileName <- cmd
-      do p.StartInfo.Arguments <- args |> String.concat " "
-      do p.StartInfo.RedirectStandardInput <- true
-      do p.StartInfo.RedirectStandardOutput <- true
-      do p.Start() |> ignore
-      do! p.StandardInput.WriteLineAsync stdin
-      do p.WaitForExit()
-      return p.StandardOutput.ReadToEnd()
-    }
-
-  let inline run cmd args =
-    use p = new Process()
-    p.EnableRaisingEvents <- false
-    p.StartInfo.UseShellExecute <- false
-    p.StartInfo.FileName <- cmd
-    p.StartInfo.Arguments <- args |> String.concat " "
-    p.Start() |> ignore
-    p.WaitForExit()
-    p.ExitCode
-
-  let inline runAsync cmd args =
-    async {
-      use p = new Process()
-      do p.EnableRaisingEvents <- false
-      do p.StartInfo.UseShellExecute <- false
-      do p.StartInfo.FileName <- cmd
-      do p.StartInfo.Arguments <- args |> String.concat " "
-      do p.Start() |> ignore
-      do p.WaitForExit() 
-      return p.ExitCode
-    }
-#endif
 
