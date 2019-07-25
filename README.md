@@ -24,15 +24,15 @@ Unfortunately I don't have a Windows PC, so writing a git hook script for Window
 
 It is also lacking documentation, and it will be great to have more useful functions!
 
-## Why one-file? / Installation
+## Installation
 
-* It only contains modules and functions (mostly inline) marked with `internal`
-* It does not depend on anything other than the standard library
 * You can just copy it to your project or use [Paket](https://github.com/fsprojects/Paket):
 
 ```
 github cannorin/prelude.fs prelude.fs
 ```
+
+* It is also available on NuGet: [`dotnet add package Prelude.fs`](https://www.nuget.org/packages/Prelude.fs)
 
 ## License
 
