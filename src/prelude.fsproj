@@ -1,6 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard1.6</TargetFrameworks>
+    <Description>Solution to various problems writing F#</Description>
+    <Authors>cannorin</Authors>
+    <Product>Prelude.fs</Product>
+    <PackageId>Prelude.fs</PackageId>
+    <Copyright>(c) cannorin 2018-2019</Copyright>
+    <PackageProjectUrl>https://github.com/cannorin/prelude.fs</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>fsharp prelude</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
