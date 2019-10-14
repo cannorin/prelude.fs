@@ -29,6 +29,8 @@ module String =
 
   let inline remove startIndex endIndex (str: string) = str.Remove(startIndex, endIndex)
 
+  let inline stringf format (x: ^a) = (^a : (member ToString: string -> string) (x, format))
+
   let inline substringAfter i (str: string) = str.Substring i
 
   let inline substring startIndex endIndex (str: string) = str.Substring(startIndex, endIndex)
