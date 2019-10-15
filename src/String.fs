@@ -11,16 +11,16 @@ module String =
 
   let inline contains (s: ^a) (str: ^String) : bool = (^String: (member IndexOf: ^a -> int) str, s) <> -1
 
-  let inline findIndex (q: ^T) (str: ^String) = 
+  let inline findIndex (q: ^T) (str: ^String) =
     (^String: (member IndexOf: ^T -> int) (str, q))
 
-  let inline findIndexAfter (q: ^T) i (str: ^String) = 
+  let inline findIndexAfter (q: ^T) i (str: ^String) =
     (^String: (member IndexOf: ^T -> int -> int) (str, q, i))
 
-  let inline findLastIndex (q: ^T) (str: ^String) = 
+  let inline findLastIndex (q: ^T) (str: ^String) =
     (^String: (member LastIndexOf: ^T -> int) (str, q))
 
-  let inline findLastIndexAfter (q: ^T) i (str: ^String) = 
+  let inline findLastIndexAfter (q: ^T) i (str: ^String) =
     (^String: (member LastIndexOf: ^T -> int -> int) (str, q, i))
 
   let inline insertAt s i (str: string) = str.Insert(i, s)
@@ -29,16 +29,14 @@ module String =
 
   let inline remove startIndex endIndex (str: string) = str.Remove(startIndex, endIndex)
 
-  let inline stringf format (x: ^a) = (^a : (member ToString: string -> string) (x, format))
-
   let inline substringAfter i (str: string) = str.Substring i
 
   let inline substring startIndex endIndex (str: string) = str.Substring(startIndex, endIndex)
 
 #if !NETSTANDARD1_6
   let inline normalize (str: string) = str.Normalize()
-  
-  let inline normalizeWithForm (nf: NormalizationForm) (str: string) = 
+
+  let inline normalizeWithForm (nf: NormalizationForm) (str: string) =
     str.Normalize nf
 
   let inline toLower (ci: CultureInfo) (str: string) = str.ToLower ci
@@ -57,7 +55,7 @@ module String =
   let inline padLeft i (str: string) = str.PadLeft i
 
   let inline padLeftBy i c (str: string) = str.PadLeft(i, c)
-  
+
   let inline padRight i (str: string) = str.PadRight i
 
   let inline padRightBy i c (str: string) = str.PadRight(i, c)
@@ -69,15 +67,15 @@ module String =
   let inline trimEnd (str: string) = str.TrimEnd()
 
   let inline trimBy (trimChar: char) (str: string) = str.Trim(trimChar)
-  
+
   let inline trimBySeq (trimChars: char seq) (str: string) = str.Trim(trimChars |> Seq.toArray)
 
   let inline trimStartBy (trimChar: char) (str: string) = str.TrimStart(trimChar)
-  
+
   let inline trimStartBySeq (trimChars: char seq) (str: string) = str.TrimStart(trimChars |> Seq.toArray)
 
   let inline trimEndBy (trimChar: char) (str: string) = str.TrimEnd(trimChar)
-  
+
   let inline trimEndBySeq (trimChars: char seq) (str: string) = str.TrimEnd(trimChars |> Seq.toArray)
 
   let inline replace (before: ^T) (after: ^T) (s: ^String) =
@@ -104,7 +102,7 @@ module String =
   let inline tryItem (index: int) (source: string) =
     if index >= 0 && index < source.Length then Some source.[index] else None
 
-  let inline rev (str: string) = 
+  let inline rev (str: string) =
     new String(str.ToCharArray() |> Array.rev)
 
   let inline private whileBase pred act str =

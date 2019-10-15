@@ -33,6 +33,8 @@ module ToplevelOperators =
   let inline cprintfn color format =
     Printf.kprintf (fun s -> use __ = ccl color in printfn "%s" s) format
 
+  let inline stringf format (x: ^a) = (^a : (member ToString: string -> string) (x, format))
+
   let inline flip f a b = f b a
 
   let inline tee f x = f x |> ignore; x
