@@ -23,5 +23,6 @@
     <Compile Include="IO.fs" />
     <Compile Include="Task.fs" />
     <Compile Include="Utilities.fs" />
+    <PackageReference Update="FSharp.Core" Version="4.6.0" />
   </ItemGroup>
 </Project>

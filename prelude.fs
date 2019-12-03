@@ -65,7 +65,7 @@ module ToplevelOperators =
 
   let inline tee f x = f x |> ignore; x
 
-  let inline konst a b = b
+  let inline konst a b = a
 
   let inline repeat n f x =
     let rec t i f acc =
